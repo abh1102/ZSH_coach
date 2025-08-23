@@ -1,0 +1,676 @@
+import 'dart:developer';
+import 'dart:io';
+
+import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:zanadu_coach/common/utils/dialog_utils.dart';
+import 'package:zanadu_coach/core/constants.dart';
+import 'package:zanadu_coach/core/routes.dart';
+import 'package:zanadu_coach/feature/home/logic/provider/home_bottom_provider.dart';
+import 'package:zanadu_coach/feature/login/data/model/coach_model.dart';
+import 'package:zanadu_coach/feature/login/logic/service/auth_service.dart';
+import 'package:zanadu_coach/feature/login/logic/service/preference_services.dart';
+import 'package:zanadu_coach/feature/session/data/repository/all_session_repository.dart';
+import 'package:zanadu_coach/feature/session/logic/cubit/session_cubit/session_cubit.dart';
+import 'package:zanadu_coach/feature/session/logic/cubit/today_schedule_session_cubit/today_schedule_session_cubit.dart';
+import 'package:zanadu_coach/feature/session/widgets/custom_switch.dart';
+import 'package:zanadu_coach/feature/signup/widgets/dynamic_pop_menu.dart';
+import 'package:zanadu_coach/widgets/all_button.dart';
+import 'package:zanadu_coach/widgets/appbar_without_silver.dart';
+import 'package:zanadu_coach/widgets/date_converter.dart';
+import 'package:zanadu_coach/widgets/textfield_widget.dart';
+
+class CreateGroupSession extends StatefulWidget {
+  const CreateGroupSession({super.key});
+
+  @override
+  State<CreateGroupSession> createState() => _CreateGroupSessionState();
+}
+
+class _CreateGroupSessionState extends State<CreateGroupSession> {
+  bool isSaveGoogleEvent = false;
+  bool isSaveAppleEvent = false;
+  String? selectedDateText;
+  String? selectedTimeText;
+  String sessionType = "GROUP";
+  String offeringType = profiles[0]?.name ?? "";
+  String offeringId = profiles[0]?.id ?? "";
+
+  DateTime selectedDate = DateTime.now();
+  TimeOfDay selectedTime = TimeOfDay.now();
+
+  String formatSelectedDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$month-$day-$year';
+  }
+
+  String formatSelectedDateInYMD(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return '$year-$month-$day';
+  }
+
+  AllSessionRepository allSessionRepository = AllSessionRepository();
+
+  void createEventInGoole(String googleToken, String summary,
+      String description, String eventDate, int beforeTime) async {
+    await allSessionRepository.createGoogleEventApi(
+        googleToken: googleToken,
+        summary: summary,
+        description: description,
+        eventDate: eventDate,
+        beforeTime: beforeTime);
+  }
+
+  TextEditingController title = TextEditingController();
+
+  TextEditingController description = TextEditingController();
+
+  TextEditingController sl = TextEditingController();
+  int slots = 0;
+
+  late TodayScheduleSessionCubit todayScheduleSessionCubit;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+
+    todayScheduleSessionCubit =
+        BlocProvider.of<TodayScheduleSessionCubit>(context);
+  }
+
+  void addEventToCalendar(
+      String title, DateTime selectedDate, Duration reminderDuration) {
+    final DateTime eventTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+    );
+
+    final Event event = Event(
+      title: title,
+      description: description.text.trim(),
+      location: 'Event Location', // Add a location if needed
+      startDate: eventTime,
+      endDate: eventTime.add(const Duration(hours: 1)),
+      iosParams: IOSParams(
+        reminder: reminderDuration,
+      ),
+    );
+
+    Add2Calendar.addEvent2Cal(event);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tabIndexProvider = Provider.of<TabIndexProvider>(context);
+    return BlocListener<AllSessionCubit, AllSessionState>(
+        listener: (context, state) async {
+          if (state is AllSessionCreatedState) {
+            if (isSaveGoogleEvent == true) {
+              String? token = await Preferences.fetchGoogleAccessToken();
+
+              createEventInGoole(
+                  token ?? "",
+                  title.text.trim(),
+                  description.text.trim(),
+                  formatDateTime(selectedDate, selectedTime),
+                  10);
+            }
+
+            if (isSaveAppleEvent == true) {
+              addEventToCalendar(
+                  title.text.trim(), selectedDate, Duration(minutes: 10));
+            }
+
+            Routes.closeAllAndGoTo(Screens.homeBottomBar);
+            tabIndexProvider.setInitialTabIndex(2);
+            showGreenSnackBar(
+              state.message,
+            );
+          } else if (state is AllSessionLoadingState) {
+            // Handle the new session created state
+            // For example, close the loading dialog or navigate to another screen
+
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return const Center(
+                  child: CircularProgressIndicator.adaptive(),
+                );
+              },
+            );
+          } else if (state is AllSessionErrorState) {
+            Navigator.of(context).pop();
+            showSnackBar(state.error);
+          }
+        },
+        child: Scaffold(
+          appBar: const AppBarWithBackButtonWOSilver(
+              firstText: "Group", secondText: "Session"),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: 28.h,
+                  horizontal: 28.w,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    simpleText(
+                      "Offering Type",
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textLight,
+                    ),
+                    height(8),
+                    DynamicPopupMenu(
+                      boundaryColor: AppColors.greyLight,
+                      selectedValue: offeringType,
+                      items:
+                          profiles.map((health) => health?.name ?? "").toList(),
+                      onSelected: (String value) {
+                        setState(() {
+                          offeringType = value;
+                          Health? selectedOffering = profiles
+                              .firstWhere((health) => health?.name == value);
+
+                          offeringId = selectedOffering?.id ?? "";
+                        });
+                      },
+                    ),
+                    height(16),
+                    simpleText(
+                      "Session Type",
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textLight,
+                    ),
+                    height(8),
+                    DynamicPopupMenu(
+                      boundaryColor: AppColors.greyLight,
+                      selectedValue: sessionType,
+                      items: const [
+                        'GROUP',
+                        'YOGA',
+                      ],
+                      onSelected: (String value) {
+                        setState(() {
+                          sessionType = value;
+                        });
+                      },
+                    ),
+                    height(16),
+                    simpleText(
+                      "Title",
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textLight,
+                    ),
+                    height(8),
+                    NoIconTextFieldWidget(
+                      controller: title,
+                    ),
+                    height(16),
+                    simpleText(
+                      "Description",
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textLight,
+                    ),
+                    height(8),
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: AppColors.greyLight,
+                          )),
+                      child: TextFormField(
+                        controller: description,
+                        maxLines: 6,
+                        decoration:
+                            const InputDecoration(border: InputBorder.none),
+                      ),
+                    ),
+                    height(16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.greyLight,
+                                )),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 5.h,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: simpleText(
+                                    selectedDateText ?? "Date",
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: SvgPicture.asset(
+                                      "assets/icons/calendar(1).svg"),
+                                  onPressed: () async {
+                                    final DateTime? picked =
+                                        await showDatePicker(
+                                      context: context,
+                                      initialDate: selectedDate,
+                                      firstDate: DateTime.now(),
+                                      lastDate: DateTime(2101),
+                                    );
+                                    if (picked != null) {
+                                      setState(() {
+                                        selectedDate = picked;
+                                        selectedDateText =
+                                            formatSelectedDate(picked);
+                                      });
+                                      todayScheduleSessionCubit
+                                          .createTodayScheduleSession(
+                                              date: formatSelectedDateInYMD(
+                                                  picked));
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        width(13),
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.greyLight,
+                                )),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 5.h,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: simpleText(
+                                    selectedTimeText ?? "Time",
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon:
+                                      SvgPicture.asset("assets/icons/time.svg"),
+                                  onPressed: () async {
+                                    final TimeOfDay? picked =
+                                        await showTimePicker(
+                                      context: context,
+                                      initialTime: TimeOfDay.now(),
+                                    );
+                                    if (picked != null) {
+                                      // Check if the selected time is in the past
+                                      final DateTime selectedDateTime =
+                                          DateTime(
+                                        selectedDate.year,
+                                        selectedDate.month,
+                                        selectedDate.day,
+                                        picked.hour,
+                                        picked.minute,
+                                      );
+                                      if (selectedDateTime
+                                          .isBefore(DateTime.now())) {
+                                        // Show an error or handle the case where the time is in the past
+                                        // ignore: use_build_context_synchronously
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                            behavior: SnackBarBehavior.floating,
+                                            content: Text(
+                                                "Please select a future time."),
+                                          ),
+                                        );
+                                      } else {
+                                        setState(() {
+                                          selectedTime = picked;
+                                          selectedTimeText =
+                                              picked.format(context);
+                                        });
+                                      }
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    height(16),
+                    simpleText(
+                      "Total no. of Slots",
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textLight,
+                    ),
+                    height(8),
+                    SizedBox(
+                      width: 180.w,
+                      child: NoIconTextFieldWidget(
+                        phoneKeyboard: true,
+                        controller: sl,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Please enter the number of slots";
+                          }
+                          final intSlots = int.tryParse(value);
+                          if (intSlots == null ||
+                              intSlots < 5 ||
+                              intSlots > 20) {
+                            return "Number of slots must be between 5 and 20";
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                    simpleText(
+                      "Minimum slots- 5  Maximum slots- 20",
+                      color: AppColors.textLight,
+                      fontSize: 14,
+                    ),
+                    height(28),
+                    CustomSwitchImage(
+                        svg: "assets/icons/Google.svg",
+                        value: isSaveGoogleEvent,
+                        onChanged: (value) async {
+                          log("google token 1");
+                          if (!value) {
+                            log("google token 2");
+                            // If the switch is being turned off, immediately update the state
+                            setState(() {
+                              isSaveGoogleEvent = value;
+                            });
+                          } else {
+                            // If the switch is being turned on, check for Google access token
+                            log("google token 3");
+                             log("google token 4");
+                            String? token =
+                                await Preferences.fetchGoogleAccessToken();
+                            log("google token $token");
+
+                            if (token != null) {
+                              // If access token exists, update the state
+
+                              log("google token $token");
+                              setState(() {
+                                isSaveGoogleEvent = value;
+                              });
+                            } else {
+                              // If access token does not exist, prompt the user to sign in
+                               log("google token 9");
+                              UserCredential credential =
+                                  await AuthServices().signInWithGoogle();
+                                   log("google token 90");  
+                              await Preferences.saveGoogleAccessToken(
+                                  credential.credential?.accessToken ?? "");
+
+                              // After successful sign-in, update the state
+                              setState(() {
+                                isSaveGoogleEvent = true;
+                              });
+
+                              print(credential.credential?.accessToken ?? "");
+                            }
+                          }
+                        },
+                        firstText: "Save Event To Google Calendar",
+                        secondText: "Do Not Save Event"),
+                    if (Platform.isIOS) height(28),
+                    if (Platform.isIOS)
+                      CustomSwitchImageApple(
+                          svg: "assets/icons/Linkedin.svg",
+                          value: isSaveAppleEvent,
+                          onChanged: (value) {
+                            setState(() {
+                              isSaveAppleEvent = value;
+                            });
+                          },
+                          firstText: "Save Event To Apple Calendar",
+                          secondText: "Do Not Save Event"),
+                    if (selectedDateText != null) height(40),
+                    if (selectedDateText != null)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: AppColors.primaryBlue, width: 2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            simpleText(
+                              "Schedule of $selectedDateText",
+                              fontSize: 18,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            height(20),
+                            BlocBuilder<TodayScheduleSessionCubit,
+                                TodayScheduleSessionState>(
+                              builder: (context, state) {
+                                if (state is TodayScheduleSessionLoadingState) {
+                                  return const Center(
+                                      child:
+                                          CircularProgressIndicator.adaptive());
+                                } else if (state
+                                    is TodayScheduleSessionLoadedState) {
+                                  // Access the loaded plan from the state
+                                  var data = state.todaySchedule.sessions;
+                                  if (data!.isEmpty) {
+                                    return simpleText(
+                                      "No Schedule for this date",
+                                      align: TextAlign.center,
+                                    );
+                                  }
+                                  return ListView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount: data.length,
+                                      itemBuilder: (context, index) {
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 16),
+                                          child: GetTodayScheduleCardSmall(
+                                              sessionType:
+                                                  data[index].sessionType ?? "",
+                                              startTime: myformattedTime(
+                                                  data[index].startDate ?? ""),
+                                              sessionTime:
+                                                  "${data[index].endDate} min"),
+                                        );
+                                      });
+                                } else if (state
+                                    is TodayScheduleSessionErrorState) {
+                                  return Text('Error: ${state.error}');
+                                } else {
+                                  return const Text('Something is wrong');
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    height(64),
+                    ColoredButtonWithoutHW(
+                      isLoading: false,
+                      onpressed: () async {
+                        if (title.text.trim().isEmpty ||
+                            description.text.trim().isEmpty ||
+                            selectedDateText == null ||
+                            selectedTimeText == null) {
+                          showSnackBar("Please fill all details");
+                        } else {
+                          if ((int.tryParse(sl.text) ?? 0) <= 20 &&
+                              (int.tryParse(sl.text) ?? 0) >= 5) {
+                            final formattedDateTime =
+                                formatDateTime(selectedDate, selectedTime);
+
+                            print("formatted time ${formattedDateTime}");
+                            // Trigger the create session function here
+                            BlocProvider.of<AllSessionCubit>(context)
+                                .createSession(
+                                  offeringId: offeringId,
+                                  sessionType: sessionType,
+                                  title: title.text,
+                                  description: description.text,
+                                  coachId: myCoach?.userId ?? "",
+                                  startDate: formattedDateTime,
+                                  noOfSlots: int.tryParse(sl.text) ?? 1,
+                                )
+                                .then((value) async {});
+                          } else {
+                            showSnackBar(
+                                "You can not fill more than 20 and less than 5 seats");
+                          }
+                        }
+                      },
+                      text: "Create Group Session",
+                      size: 16,
+                      weight: FontWeight.w600,
+                      verticalPadding: 14,
+                    ),
+                    height(16),
+                    GestureDetector(
+                      onTap: () {
+                        Routes.goBack();
+                      },
+                      child: const SimpleWhiteTextButtonWOHW(
+                        isLoading: false,
+                        text: "Cancel",
+                        size: 16,
+                        weight: FontWeight.w600,
+                        verticalPadding: 14,
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ));
+  }
+}
+
+class GetTodayScheduleCardSmall extends StatelessWidget {
+  const GetTodayScheduleCardSmall({
+    super.key,
+    required this.sessionType,
+    required this.startTime,
+    required this.sessionTime,
+  });
+
+  final String sessionType;
+  final String startTime;
+  final String sessionTime;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+          gradient: Insets.fixedGradient(opacity: 0.8),
+          borderRadius: BorderRadius.circular(15)),
+      padding: EdgeInsets.symmetric(
+        vertical: 9.h,
+        horizontal: 22.w,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          simpleText(
+            sessionType,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+          height(16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    simpleText(
+                      "Start Time",
+                      fontWeight: FontWeight.w500,
+                    ),
+                    height(8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 9, horizontal: 9),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: simpleText(startTime),
+                    ),
+                  ],
+                ),
+              ),
+              width(8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    simpleText("Session Time", fontWeight: FontWeight.w500),
+                    height(8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 9, horizontal: 9),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12)),
+                      child: simpleText(sessionTime),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          height(16),
+        ],
+      ),
+    );
+  }
+}
+
+// Function to format DateTime to "yyyy-MM-ddTHH:mm:ss.SSSZ" format
+// Function to format DateTime to "yyyy-MM-ddTHH:mm:ss.SSSZ" format
+String formatDateTime(DateTime date, TimeOfDay time) {
+  final dateTime =
+      DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  final formattedDateTime =
+      DateFormat("yyyy-MM-ddTHH:mm:ss.SSSZ").format(dateTime.toUtc());
+  return formattedDateTime;
+}

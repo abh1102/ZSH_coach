@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "847098207975",
+    "project_id": "zh-coach-staging",
+    "storage_bucket": "zh-coach-staging.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:847098207975:android:64cb7e17abdc26ee3b8c42",
+        "android_client_info": {
+          "package_name": "com.zanaduhealth.coach"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "847098207975-4e8d9opmob7jabqkae4a95i9djlio04v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zanaduhealth.coach",
+            "certificate_hash": "06386925e2d3ce91a5282923bef955083b8cd4d8"
+          }
+        },
+        {
+          "client_id": "847098207975-d47lcn5gcpg45b8j1aq5jvu57epbkd69.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zanaduhealth.coach",
+            "certificate_hash": "5df7c9ad613a137dcd81c839cf84c90205eed960"
+          }
+        },
+        {
+          "client_id": "847098207975-ob61e9vfhf1cpufu2pj602ea6q2qdcgl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCPAJTKyuRogtBC_W01Wv30MWxhnKXrzfU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "847098207975-7id8j44arcim134sornphvkmgc54gluj.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "847098207975-6nesf9od72qj2l3i1sabrc3p713u1b3s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.zanaduhealth.coach"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

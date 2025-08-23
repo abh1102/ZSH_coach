@@ -1,0 +1,24 @@
+<svg width="11" height="11" viewBox="0 0 11 11" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="bar-chart-2" clip-path="url(#clip0_70_1229)">
+<path id="Vector" d="M8.6499 8.47128V4.36414" stroke="url(#paint0_linear_70_1229)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_2" d="M6.18555 8.4717V1.90027" stroke="url(#paint1_linear_70_1229)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_3" d="M3.72119 8.47149V6.0072" stroke="url(#paint2_linear_70_1229)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_70_1229" x1="9.6499" y1="6.41771" x2="8.6499" y2="6.41771" gradientUnits="userSpaceOnUse">
+<stop stop-color="#25D366"/>
+<stop offset="1" stop-color="#03C0FF"/>
+</linearGradient>
+<linearGradient id="paint1_linear_70_1229" x1="7.18555" y1="5.18599" x2="6.18555" y2="5.18599" gradientUnits="userSpaceOnUse">
+<stop stop-color="#25D366"/>
+<stop offset="1" stop-color="#03C0FF"/>
+</linearGradient>
+<linearGradient id="paint2_linear_70_1229" x1="4.72119" y1="7.23935" x2="3.72119" y2="7.23935" gradientUnits="userSpaceOnUse">
+<stop stop-color="#25D366"/>
+<stop offset="1" stop-color="#03C0FF"/>
+</linearGradient>
+<clipPath id="clip0_70_1229">
+<rect width="9.85714" height="9.85714" fill="white" transform="translate(0.25708 0.257202)"/>
+</clipPath>
+</defs>
+</svg>
