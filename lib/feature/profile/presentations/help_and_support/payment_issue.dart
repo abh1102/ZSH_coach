@@ -203,7 +203,7 @@ class _HelpSupportPaymentIssueState extends State<HelpSupportPaymentIssue> {
 
                           Navigator.pop(context);
 
-                          if (success) {
+                          if (success != null) {
                             showSuccessDialog(context);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(

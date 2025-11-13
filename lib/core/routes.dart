@@ -39,6 +39,7 @@ import 'package:zanadu_coach/feature/profile/logic/cubit/switch_profile/switch_p
 import 'package:zanadu_coach/feature/profile/logic/provider/edit_profile_provider.dart';
 import 'package:zanadu_coach/feature/profile/presentations/calendar_reminder_screen.dart';
 import 'package:zanadu_coach/feature/profile/presentations/edit_profile_screen.dart';
+import 'package:zanadu_coach/feature/profile/presentations/help_and_support/TicketHistoryScreen.dart';
 import 'package:zanadu_coach/feature/profile/presentations/help_and_support/about_us.dart';
 import 'package:zanadu_coach/feature/profile/presentations/help_and_support/help_support_screen.dart';
 import 'package:zanadu_coach/feature/profile/presentations/help_and_support/payment_issue.dart';
@@ -115,6 +116,7 @@ class Screens {
   static const scheduleFollowUp = 'scheduleFollowUp';
   static const helpSupportPayment = "helpSupportPayment";
   static const addNewVideo = "addNewVideo";
+  static const ticketHistoryScreen="ticketHistoryScreen";
   static const myVideos = "myVideos";
   static const payOuts = "payOuts";
   static const myVideosDetail = "myVideosDetail";
@@ -488,6 +490,10 @@ class Routes {
         return CupertinoPageRoute(
           builder: (context) =>
               MyVideosDetailScreen(videos: settings.arguments as MyVideos),
+        );
+      case Screens.ticketHistoryScreen:
+        return CupertinoPageRoute(
+          builder: (context) => TicketHistoryScreen(),
         );
 
       case Screens.keymyVideosDetail:
